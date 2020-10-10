@@ -14,6 +14,7 @@ pub struct BlogPost {
     pub content: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub user_id: Option<String>,
+    pub username: String
 }
 
 fn get_coll(db: &Database) -> Collection {
@@ -27,12 +28,13 @@ pub struct PostBlog {
 }
 
 impl BlogPost {
-    pub fn new(title: String, content: String, user_id: &String) -> Self {
+    pub fn new(title: String, content: String, user_id: &str, username: String) -> Self {
         BlogPost {
             id: None,
             title,
-            user_id: Some(user_id.as_str().to_string()),
+            user_id: Some(user_id.to_string()),
             content,
+            username
         }
     }
 
@@ -40,11 +42,12 @@ impl BlogPost {
         let coll = get_coll(db);
         match coll
             .insert_one(
-                doc! {
-                    "title": &self.title,
-                    "content": &self.content,
-                    "user_id": &self.user_id.as_ref().unwrap()
-                },
+                bson::to_document(&self).unwrap(),
+                // doc! {
+                //     "title": &self.title,
+                //     "content": &self.content,
+                //     "user_id": &self.user_id.as_ref().unwrap()
+                // },
                 None,
             )
             .await

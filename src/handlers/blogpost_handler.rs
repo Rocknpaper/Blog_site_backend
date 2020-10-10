@@ -6,7 +6,7 @@ use serde_json::json;
 
 use crate::{
     errors::AppError,
-    models::blogs::{BlogPost, Comments, PostBlog, PostComment, PostReply},
+    models::{ user::User, blogs::{BlogPost, Comments, PostBlog, PostComment, PostReply}},
     AppData,
 };
 
@@ -31,10 +31,16 @@ pub async fn post_posts(
     data: web::Json<PostBlog>,
     app_data: web::Data<Arc<Mutex<AppData>>>,
 ) -> Result<HttpResponse, AppError> {
+
+    let user_id = app_data.lock().unwrap().user_id.as_ref().unwrap().clone();
+
+    let user = User::get_user_by_id(db.get_ref(), user_id.as_str()).await?;
+
     let blog = BlogPost::new(
         data.title.to_owned(),
         data.content.to_owned(),
-        app_data.lock().unwrap().user_id.as_ref().unwrap(),
+        user_id.as_str(),
+        user.username
     );
     blog.save(db.get_ref()).await?;
     Ok(HttpResponse::Ok().body(json!({
