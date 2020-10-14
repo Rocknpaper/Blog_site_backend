@@ -14,6 +14,6 @@ pub async fn post_login(
     if !form_data.validate(&user).await {
         return Ok(HttpResponse::Unauthorized().body("Incorrect Password"));
     }
-    let jwt = Claims::encode_req(user.id.unwrap().to_string().as_str()).await?;
-    Ok(HttpResponse::Ok().json(json!({ "jwt": jwt })))
+    let jwt = Claims::encode_req(user.id.as_ref().unwrap().to_string().as_str()).await?;
+    Ok(HttpResponse::Ok().json(json!({"_id": user.id, "username": user.username, "email": user.email, "user_avatar": user.user_avatar ,"jwt": jwt })))
 }
