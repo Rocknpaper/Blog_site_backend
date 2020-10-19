@@ -8,7 +8,7 @@ use mongodb::{
 use serde::{Deserialize, Serialize};
 
 fn get_coll(db: &Database) -> Collection {
-    db.collection("user")
+    db.collection("users")
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -39,7 +39,7 @@ impl User {
                     "username": &self.username,
                     "email": &self.email,
                     "password": &self.password,
-                    "user_avatar": &self.user_avatar.as_ref().unwrap()
+                    "user_avatar": format!("https://test-blog-static.s3.ap-south-1.amazonaws.com{}", &self.user_avatar.as_ref().unwrap())
                 },
                 None,
             )

@@ -43,11 +43,11 @@ pub async fn post_user(
     }
 }
 
-#[get("/users")]
-pub async fn get_users(db: web::Data<Database>) -> Result<HttpResponse, AppError> {
-    let users = User::get_users(db.get_ref()).await?;
-    Ok(HttpResponse::Ok().json(users))
-}
+//#[get("/users")]
+//pub async fn get_users(db: web::Data<Database>) -> Result<HttpResponse, AppError> {
+//    let users = User::get_users(db.get_ref()).await?;
+//    Ok(HttpResponse::Ok().json(users))
+//}
 
 #[get("/user/{uid}")]
 pub async fn get_user(
