@@ -25,3 +25,4 @@ serde_json = "1.0.57"
 async-std = "1.6.3"
 bytes = { version = "0.5", features = ["serde"] }
 actix-cors = "0.3.0"
+bcrypt="0.8.2"

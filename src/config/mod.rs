@@ -4,6 +4,7 @@ use std::env::var;
 
 use crate::errors::{AppError, AppErrorType};
 
+pub mod crypto;
 pub mod jwt;
 pub mod s3_aws;
 
@@ -12,6 +13,7 @@ pub struct Config {
     pub port: String,
     pub mongodb_uri: String,
     pub db_name: String,
+    // pub secret_key: String,
 }
 
 impl Config {
@@ -22,6 +24,7 @@ impl Config {
             host: var("host").unwrap(),
             port: var("port").unwrap(),
             mongodb_uri: var("mongodb_uri").unwrap(),
+            // secret_key: var("SECRET_KEY").unwrap(),
             db_name: var("db_name").unwrap(),
         }
     }
@@ -35,5 +38,9 @@ impl Config {
                 error_type: AppErrorType::DatabaseError,
             })?
             .database(&self.db_name))
+    }
+
+    pub async fn crypto_services(&self) -> crypto::CryptoService {
+        crypto::CryptoService
     }
 }

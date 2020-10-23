@@ -115,6 +115,20 @@ pub async fn get_comment(
     Ok(HttpResponse::Ok().json(res))
 }
 
+#[patch("/comment/{id}")]
+pub async fn patch_comment(
+    db: web::Data<Database>,
+    id: web::Path<String>,
+    data: web::Json<PostComment>,
+) -> Result<HttpResponse, AppError> {
+    data.patch_comments(db.get_ref(), id.as_str()).await?;
+
+    Ok(HttpResponse::Ok().json(json! ({
+        "Status": "Ok",
+        "response": 200,
+    })))
+}
+
 #[delete("/comment/{id}")]
 pub async fn delete_comment(
     db: web::Data<Database>,
@@ -127,7 +141,7 @@ pub async fn delete_comment(
     })))
 }
 
-#[patch("/reply-comment/{id}")]
+#[post("/reply-comment/{id}")]
 pub async fn post_reply(
     db: web::Data<Database>,
     id: web::Path<String>,
@@ -142,12 +156,28 @@ pub async fn post_reply(
     })))
 }
 
+#[patch("/reply-comment/{comment_id}/{reply_id}")]
+pub async fn patch_reply(
+    db: web::Data<Database>,
+    params: web::Path<(String, String)>,
+    data: web::Json<PostReply>,
+) -> Result<HttpResponse, AppError> {
+    let (comment_id, reply_id) = params.into_inner();
+
+    data.patch_replies(db.get_ref(), comment_id.as_str(), reply_id.as_str())
+        .await?;
+
+    Ok(HttpResponse::Ok().json(json!({
+        "Status": "OK",
+        "response": 200,
+    })))
+}
+
 #[delete("/reply-comment/{comment_id}/{reply_id}")]
 pub async fn delete_reply(
     db: web::Data<Database>,
-    params: web::Path<(String, String)>
-) -> Result<HttpResponse, AppError>{
-
+    params: web::Path<(String, String)>,
+) -> Result<HttpResponse, AppError> {
     let (comment_id, reply_id) = params.into_inner();
 
     Comments::delete_reply(db.get_ref(), comment_id.as_str(), reply_id.as_str()).await?;

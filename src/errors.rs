@@ -10,6 +10,8 @@ pub enum AppErrorType {
     JWTParsingError,
     FileUploadError,
     InavlidId,
+    HashingError,
+    ALREADYEXIST,
 }
 
 #[derive(Debug)]
@@ -71,6 +73,8 @@ impl ResponseError for AppError {
             AppErrorType::FileUploadError => StatusCode::INTERNAL_SERVER_ERROR,
             AppErrorType::JWTParsingError => StatusCode::INTERNAL_SERVER_ERROR,
             AppErrorType::InavlidId => StatusCode::NOT_FOUND,
+            AppErrorType::HashingError => StatusCode::INTERNAL_SERVER_ERROR,
+            AppErrorType::ALREADYEXIST => StatusCode::CREATED,
         }
     }
 

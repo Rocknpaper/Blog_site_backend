@@ -58,14 +58,7 @@ impl PostBlog {
     pub async fn patch_posts(&self, db: &Database, blog_id: &str) -> Result<(), AppError> {
         let coll = get_coll(db);
 
-        let blog_id = match ObjectId::with_string(blog_id) {
-            Ok(val) => Ok(val),
-            Err(_e) => Err(AppError {
-                cause: Some(_e.to_string()),
-                message: None,
-                error_type: AppErrorType::InavlidId,
-            }),
-        }?;
+        let blog_id = convert_obj_id(blog_id).await?;
 
         match coll
             .update_one(
@@ -482,6 +475,43 @@ pub struct PostReply {
     pub content: String,
 }
 
+impl PostReply {
+    pub async fn patch_replies(
+        &self,
+        db: &Database,
+        comment_id: &str,
+        reply_id: &str,
+    ) -> Result<(), AppError> {
+        let comment_id = convert_obj_id(comment_id).await?;
+        let reply_id = convert_obj_id(reply_id).await?;
+
+        let coll = db.collection("comments");
+
+        match coll
+            .update_one(
+                doc! {
+                    "_id": comment_id,
+                    "replies._id": reply_id
+                },
+                doc! {
+                    "$set": {
+                        "replies.$.content": &self.content.as_str()
+                    }
+                },
+                None,
+            )
+            .await
+        {
+            Ok(_) => Ok(()),
+            Err(_e) => Err(AppError {
+                cause: Some(_e.to_string()),
+                message: None,
+                error_type: AppErrorType::DatabaseError,
+            }),
+        }
+    }
+}
+
 #[derive(Deserialize, Debug)]
 pub struct PostComment {
     pub user_id: String,
@@ -517,9 +547,35 @@ impl PostComment {
             .insert_one(bson::to_document(&comment).unwrap(), None)
             .await
         {
-            Ok(m) => {
-                Ok(m.inserted_id.as_object_id().unwrap().to_hex())
-            }
+            Ok(m) => Ok(m.inserted_id.as_object_id().unwrap().to_hex()),
+            Err(_e) => Err(AppError {
+                cause: Some(_e.to_string()),
+                message: None,
+                error_type: AppErrorType::DatabaseError,
+            }),
+        }
+    }
+
+    pub async fn patch_comments(&self, db: &Database, comment_id: &str) -> Result<(), AppError> {
+        let coll = db.collection("comments");
+
+        let comment_id = convert_obj_id(comment_id).await?;
+
+        match coll
+            .update_one(
+                doc! {
+                    "_id": comment_id
+                },
+                doc! {
+                    "$set": {
+                        "content": &self.content.as_str()
+                    }
+                },
+                None,
+            )
+            .await
+        {
+            Ok(_) => Ok(()),
             Err(_e) => Err(AppError {
                 cause: Some(_e.to_string()),
                 message: None,

@@ -1,4 +1,8 @@
-use crate::errors::{AppError, AppErrorType};
+use crate::{
+    config::crypto::CryptoService,
+    errors::{AppError, AppErrorType},
+};
+
 use bson;
 use futures::StreamExt;
 use mongodb::{
@@ -24,6 +28,19 @@ pub struct User {
     pub id: Option<ObjectId>,
     pub username: String,
     pub email: String,
+    // #[serde(skip_serializing)]
+    pub password: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub user_avatar: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct UserDetails {
+    #[serde(rename = "_id")]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub id: Option<ObjectId>,
+    pub username: String,
+    pub email: String,
     #[serde(skip_serializing)]
     pub password: String,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -31,18 +48,16 @@ pub struct User {
 }
 
 impl User {
-    pub async fn save(&self, db: &Database) -> Result<(), AppError> {
+    pub async fn save(&mut self, db: &Database) -> Result<(), AppError> {
         let coll = get_coll(&db);
+        self.password = CryptoService::hash_password(self.password.clone()).await?;
+        self.user_avatar = Some(format!(
+            "https://test-blog-static.s3.ap-south-1.amazonaws.com{}",
+            &self.user_avatar.as_ref().unwrap()
+        ));
+
         match coll
-            .insert_one(
-                doc! {
-                    "username": &self.username,
-                    "email": &self.email,
-                    "password": &self.password,
-                    "user_avatar": format!("https://test-blog-static.s3.ap-south-1.amazonaws.com{}", &self.user_avatar.as_ref().unwrap())
-                },
-                None,
-            )
+            .insert_one(bson::to_document(self).unwrap(), None)
             .await
         {
             Ok(_) => Ok(()),
@@ -54,7 +69,66 @@ impl User {
         }
     }
 
-    pub async fn get_user_by_id(db: &Database, uid: &str) -> Result<User, AppError> {
+    pub async fn check_username(&self, db: &Database) -> Result<(), AppError> {
+        let coll = get_coll(&db);
+        match coll
+            .find_one(
+                doc! {
+                    "username": self.username.as_str()
+                },
+                None,
+            )
+            .await
+        {
+            Ok(val) => {
+                if !val.is_none() {
+                    return Err(AppError {
+                        cause: Some("USERNAME_EXISTS".to_string()),
+                        message: None,
+                        error_type: AppErrorType::ALREADYEXIST,
+                    });
+                }
+                return Ok(());
+            }
+            Err(_e) => Err(AppError {
+                cause: Some(_e.to_string()),
+                message: None,
+                error_type: AppErrorType::DatabaseError,
+            }),
+        }
+    }
+
+    pub async fn check_email(&self, db: &Database) -> Result<(), AppError> {
+        let coll = get_coll(&db);
+
+        match coll
+            .find_one(
+                doc! {
+                    "email": self.email.as_str()
+                },
+                None,
+            )
+            .await
+        {
+            Ok(val) => {
+                if !val.is_none() {
+                    return Err(AppError {
+                        cause: Some("EMAIL_EXISTS".to_string()),
+                        message: None,
+                        error_type: AppErrorType::ALREADYEXIST,
+                    });
+                }
+                return Ok(());
+            }
+            Err(_e) => Err(AppError {
+                cause: Some(_e.to_string()),
+                message: None,
+                error_type: AppErrorType::DatabaseError,
+            }),
+        }
+    }
+
+    pub async fn get_user_by_id(db: &Database, uid: &str) -> Result<UserDetails, AppError> {
         match ObjectId::with_string(uid) {
             Ok(id) => {
                 let coll = get_coll(&db);
@@ -75,7 +149,7 @@ impl User {
                                 error_type: AppErrorType::NotFoundError,
                             });
                         }
-                        let user: User = bson::from_document(user.unwrap()).unwrap();
+                        let user = bson::from_document::<UserDetails>(user.unwrap()).unwrap();
                         Ok(user)
                     }
                     Err(_e) => Err(AppError {
@@ -148,10 +222,9 @@ impl User {
 }
 
 impl UserCreds {
-    pub async fn validate(&self, db_data: &User) -> bool {
-        if self.password == db_data.password {
-            return true;
-        }
-        return false;
+    pub async fn validate(&self, db_data: &User) -> Result<bool, AppError> {
+        return Ok(
+            CryptoService::verify_hash(db_data.password.clone(), self.password.clone()).await?,
+        );
     }
 }

@@ -1,6 +1,3 @@
-// use std::sync::Mutex;
-// use std::sync::Arc;
-
 use actix_multipart::Multipart;
 use actix_web::{get, post, web, HttpResponse};
 use mongodb::Database;
@@ -22,6 +19,9 @@ pub async fn post_user(
     let ext: Vec<&str> = file[0].name.split(".").collect();
 
     let filename = format!("{}.{}", user.username, ext[1]);
+
+    user.check_username(db.get_ref()).await?;
+    user.check_email(db.get_ref()).await?;
 
     match s3_aws::upload_file(_bucket, file[0].tmp_path.as_str(), filename.as_str()).await {
         Ok(link) => {

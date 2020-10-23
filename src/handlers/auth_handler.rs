@@ -11,7 +11,7 @@ pub async fn post_login(
     form_data: web::Json<UserCreds>,
 ) -> Result<HttpResponse, AppError> {
     let user = User::get_user_by_email(db.get_ref(), form_data.email.as_str()).await?;
-    if !form_data.validate(&user).await {
+    if !form_data.validate(&user).await? {
         return Ok(HttpResponse::Unauthorized().body("Incorrect Password"));
     }
     let jwt = Claims::encode_req(user.id.as_ref().unwrap().to_string().as_str()).await?;

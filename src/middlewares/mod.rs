@@ -50,12 +50,19 @@ where
         if req.method() == "OPTIONS" {
             return Either::Left(self.service.call(req));
         }
-        let excep = vec!["auth/user", "/user/", "/blogs", "/blog/", "/comment/"];
+        let excep = vec![
+            "auth/user",
+            "/user",
+            "/user/",
+            "/blogs",
+            "/blog/",
+            "/comment/",
+        ];
 
         for add in excep {
             if req.path().contains(add) {
-                    return Either::Left(self.service.call(req));
-                }
+                return Either::Left(self.service.call(req));
+            }
         }
 
         let _auth = req.headers().get("authorization");
