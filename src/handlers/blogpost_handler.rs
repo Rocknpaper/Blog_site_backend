@@ -28,6 +28,12 @@ pub async fn get_posts(db: web::Data<Database>) -> Result<HttpResponse, AppError
     Ok(HttpResponse::Ok().json(val))
 }
 
+#[get("/blog/user/{user_id}")]
+pub async fn get_blog_by_uid(db: web::Data<Database>, user_id: web::Path<String>) -> Result<HttpResponse, AppError>{
+    let blogs = BlogPost::get_posts_by_uid(db.get_ref(), user_id.as_str()).await?;
+    Ok(HttpResponse::Ok().json(blogs))
+}
+
 #[patch("/blog/{blog_id}")]
 pub async fn patch_posts(
     db: web::Data<Database>,

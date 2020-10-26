@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::task::{Context, Poll};
 
@@ -50,17 +51,17 @@ where
         if req.method() == "OPTIONS" {
             return Either::Left(self.service.call(req));
         }
-        let excep = vec![
-            "auth/user",
-            "/user",
-            "/user/",
-            "/blogs",
-            "/blog/",
-            "/comment/",
-        ];
 
-        for add in excep {
-            if req.path().contains(add) {
+        let mut except: HashMap<String, String> = HashMap::new();
+        except.insert("/auth/user".to_string(), "POST".to_string());
+        except.insert("/user".to_string(), "POST".to_string());
+        except.insert("/user/".to_string(), "GET".to_string());
+        except.insert("/blogs".to_string(), "GET".to_string());
+        except.insert("/blog/".to_string(), "GET".to_string());
+        except.insert("/comment/".to_string(), "GET".to_string());
+
+        for (url, method) in except.iter() {
+            if req.path().contains(url.as_str()) && req.method().as_str() == method.as_str() {
                 return Either::Left(self.service.call(req));
             }
         }

@@ -22,6 +22,12 @@ pub struct UserCreds {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
+pub struct PatchUser {
+    pub email: String,
+    pub username: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
 pub struct User {
     #[serde(rename = "_id")]
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -219,6 +225,35 @@ impl User {
         }
         Ok(res)
     }
+
+    pub async fn change_password(
+        db: &Database,
+        user_id: &str,
+        password: &str,
+    ) -> Result<(), AppError> {
+        let coll = get_coll(&db);
+        match coll
+            .update_one(
+                doc! {
+                    "_id": convert_obj_id(user_id).await?
+                },
+                doc! {
+                    "$set": {
+                        "password": CryptoService::hash_password(password.to_string()).await?,
+                    }
+                },
+                None,
+            )
+            .await
+        {
+            Ok(_) => Ok(()),
+            Err(_e) => Err(AppError {
+                cause: Some(_e.to_string()),
+                message: None,
+                error_type: AppErrorType::DatabaseError,
+            }),
+        }
+    }
 }
 
 impl UserCreds {
@@ -226,5 +261,45 @@ impl UserCreds {
         return Ok(
             CryptoService::verify_hash(db_data.password.clone(), self.password.clone()).await?,
         );
+    }
+}
+
+async fn convert_obj_id(id: &str) -> Result<ObjectId, AppError> {
+    match ObjectId::with_string(id) {
+        Ok(val) => Ok(val),
+        Err(_e) => Err(AppError {
+            cause: Some(_e.to_string()),
+            message: None,
+            error_type: AppErrorType::InavlidId,
+        }),
+    }
+}
+
+impl PatchUser {
+    pub async fn patch_user_details(&self, db: &Database, user_id: &str) -> Result<(), AppError> {
+        let coll = get_coll(&db);
+
+        match coll
+            .update_one(
+                doc! {
+                    "_id": convert_obj_id(user_id).await?
+                },
+                doc! {
+                    "$set": {
+                        "username": &self.username,
+                        "email": &self.email,
+                    }
+                },
+                None,
+            )
+            .await
+        {
+            Ok(_) => Ok(()),
+            Err(_e) => Err(AppError {
+                cause: Some(_e.to_string()),
+                message: None,
+                error_type: AppErrorType::DatabaseError,
+            }),
+        }
     }
 }

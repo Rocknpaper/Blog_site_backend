@@ -7,12 +7,12 @@ pub mod user_handler;
 use self::auth_handler::post_login;
 use self::blogpost_handler::{
     delete_blog, delete_comment, delete_reply, dislike_handler_dec, dislike_handler_inc,
-    downvote_handler_dec, downvote_handler_inc, get_comment, get_post, get_posts, get_user_posts,
-    like_handler_dec, like_handler_inc, patch_comment, patch_posts, patch_reply, post_comments,
-    post_posts, post_reply, reply_dislike_dec, reply_dislike_inc, reply_like_dec, reply_like_inc,
-    upvote_handler_dec, upvote_handler_inc,
+    downvote_handler_dec, downvote_handler_inc, get_blog_by_uid, get_comment, get_post, get_posts,
+    get_user_posts, like_handler_dec, like_handler_inc, patch_comment, patch_posts, patch_reply,
+    post_comments, post_posts, post_reply, reply_dislike_dec, reply_dislike_inc, reply_like_dec,
+    reply_like_inc, upvote_handler_dec, upvote_handler_inc,
 };
-use self::user_handler::{get_user, /*get_users,*/ post_user};
+use self::user_handler::{get_user, patch_password, patch_user, /*get_users,*/ post_user};
 
 pub fn configure(cfg: &mut web::ServiceConfig) {
     cfg.service(post_login)
@@ -43,5 +43,8 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
         .service(delete_comment)
         .service(patch_comment)
         .service(patch_reply)
-        .service(delete_reply);
+        .service(delete_reply)
+        .service(patch_user)
+        .service(patch_password)
+        .service(get_blog_by_uid);
 }

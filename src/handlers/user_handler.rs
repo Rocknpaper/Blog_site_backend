@@ -1,10 +1,12 @@
 use actix_multipart::Multipart;
-use actix_web::{get, post, web, HttpResponse};
+use actix_web::{get, patch, post, web, HttpResponse};
 use mongodb::Database;
+use serde::{Deserialize, Serialize};
 use serde_json::json;
+use std::sync::{Arc, Mutex};
 
-use crate::models::user::User;
 use crate::{config::s3_aws, errors::AppError, errors::AppErrorType};
+use crate::{models::user::PatchUser, models::user::User, AppData};
 
 #[post("/user")]
 pub async fn post_user(
@@ -41,6 +43,43 @@ pub async fn post_user(
             error_type: AppErrorType::FileUploadError,
         }),
     }
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct Password {
+    pub password: String,
+}
+
+#[patch("/user-password")]
+pub async fn patch_password(
+    db: web::Data<Database>,
+    app_data: web::Data<Arc<Mutex<AppData>>>,
+    password: web::Json<Password>,
+) -> Result<HttpResponse, AppError> {
+    let user_id = app_data.lock().unwrap().user_id.as_ref().unwrap().clone();
+
+    User::change_password(db.get_ref(), user_id.as_str(), password.password.as_str()).await?;
+    Ok(HttpResponse::Ok().json(json! ({
+        "Status": "OK",
+        "response": 200
+    })))
+}
+
+#[patch("/user")]
+pub async fn patch_user(
+    db: web::Data<Database>,
+    app_data: web::Data<Arc<Mutex<AppData>>>,
+    data: web::Json<PatchUser>,
+) -> Result<HttpResponse, AppError> {
+    let user_id = app_data.lock().unwrap().user_id.as_ref().unwrap().clone();
+
+    data.patch_user_details(db.get_ref(), user_id.as_str())
+        .await?;
+
+    Ok(HttpResponse::Ok().json(json! ({
+        "Status": "OK",
+        "response": 200
+    })))
 }
 
 //#[get("/users")]
