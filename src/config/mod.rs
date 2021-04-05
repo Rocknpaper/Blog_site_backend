@@ -7,6 +7,7 @@ use crate::errors::{AppError, AppErrorType};
 pub mod crypto;
 pub mod jwt;
 pub mod s3_aws;
+pub mod email_client;
 
 pub struct Config {
     pub host: String,
@@ -14,6 +15,8 @@ pub struct Config {
     pub mongodb_uri: String,
     pub db_name: String,
     // pub secret_key: String,
+    pub email: String,
+    pub password: String
 }
 
 impl Config {
@@ -26,6 +29,8 @@ impl Config {
             mongodb_uri: var("mongodb_uri").unwrap(),
             // secret_key: var("SECRET_KEY").unwrap(),
             db_name: var("db_name").unwrap(),
+            email:  var("email").unwrap(),
+            password:  var("password").unwrap(),
         }
     }
 
@@ -43,4 +48,5 @@ impl Config {
     pub async fn crypto_services(&self) -> crypto::CryptoService {
         crypto::CryptoService
     }
+
 }

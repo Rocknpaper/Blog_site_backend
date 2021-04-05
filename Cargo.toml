@@ -26,3 +26,6 @@ async-std = "1.6.3"
 bytes = { version = "0.5", features = ["serde"] }
 actix-cors = "0.3.0"
 bcrypt="0.8.2"
+lettre="0.9"
+lettre_email="0.9"
+rand = "0.7"

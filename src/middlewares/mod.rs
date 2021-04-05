@@ -59,6 +59,9 @@ where
         except.insert("/blogs".to_string(), "GET".to_string());
         except.insert("/blog/".to_string(), "GET".to_string());
         except.insert("/comment/".to_string(), "GET".to_string());
+        except.insert("/password".to_string(), "POST".to_string());
+        except.insert("/forget-password".to_string(), "POST".to_string());
+        except.insert("/forget-password/".to_string(), "GET".to_string());
 
         for (url, method) in except.iter() {
             if req.path().contains(url.as_str()) && req.method().as_str() == method.as_str() {

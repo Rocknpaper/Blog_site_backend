@@ -12,7 +12,7 @@ use self::blogpost_handler::{
     post_comments, post_posts, post_reply, reply_dislike_dec, reply_dislike_inc, reply_like_dec,
     reply_like_inc, upvote_handler_dec, upvote_handler_inc,
 };
-use self::user_handler::{get_user, patch_password, patch_user, /*get_users,*/ post_user};
+use self::user_handler::{get_user, patch_password, patch_user, /*get_users,*/ post_user, forget_password, check_recovery, forget_success};
 
 pub fn configure(cfg: &mut web::ServiceConfig) {
     cfg.service(post_login)
@@ -46,5 +46,8 @@ pub fn configure(cfg: &mut web::ServiceConfig) {
         .service(delete_reply)
         .service(patch_user)
         .service(patch_password)
+        .service(forget_password)
+        .service(check_recovery)
+        .service(forget_success)
         .service(get_blog_by_uid);
 }

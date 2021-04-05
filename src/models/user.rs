@@ -38,6 +38,8 @@ pub struct User {
     pub password: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub user_avatar: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub recovery: Option<i32>
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -51,6 +53,8 @@ pub struct UserDetails {
     pub password: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub user_avatar: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub recovery: Option<i32>
 }
 
 impl User {
@@ -104,6 +108,93 @@ impl User {
         }
     }
 
+    pub async fn check_validiity(db: &Database, email: &str, data: i32) -> Result<(), AppError>{
+        let coll = get_coll(&db);
+
+        match coll.find_one(doc!{
+            "email": email,
+            "recovery": data
+        }, None).await {
+            Ok(val) => {
+                if val.is_some(){
+                    match coll.update_one(doc!{
+                        "email": email,
+                        "recovery": data
+                    }, doc! {
+                        "$unset": {
+                            "recovery": 1
+                        }
+                    }, None).await {
+                        Ok(_)  => Ok(()),
+                        Err(_e) => Err(AppError {
+                            cause: Some(_e.to_string()),
+                            message: None,
+                            error_type: AppErrorType::DatabaseError,
+                        }),
+                    }?; 
+                    return Ok(()) 
+                } else {
+                     Err(AppError {
+                        cause: Some("INVALID_TOKEN".to_string()),
+                        message: None,
+                       error_type: AppErrorType::InavlidToken,
+                    })
+                }
+            },
+            Err(_e) => Err(AppError {
+                cause: Some(_e.to_string()),
+                message: None,
+                error_type: AppErrorType::DatabaseError,
+            }),
+        }
+    }
+
+
+    pub async fn email_exists(email: &str, coll: &Collection) -> Result<(), AppError>{
+        match coll.find_one(doc!{
+            "email": email
+        }, None).await {
+            Ok(val) => {
+                if val.is_some(){
+                    Ok(())    
+                } else {
+                     Err(AppError {
+                        cause: Some("INVALID_TOKEN".to_string()),
+                        message: None,
+                       error_type: AppErrorType::InavlidToken,
+                    })
+                }
+            },
+            Err(_e) => Err(AppError {
+                cause: Some(_e.to_string()),
+                message: None,
+                error_type: AppErrorType::DatabaseError,
+            }),
+        }
+    }
+
+    pub async fn add_recovery(db: &Database, email: &str, data: i32) -> Result<(), AppError>{
+        let coll = get_coll(&db);
+
+        User::email_exists(&email, &coll).await?;
+
+        match coll.update_one(doc!{
+            "email": email
+        }, doc! {
+            "$set": {
+                "recovery": data
+            }
+        }, None).await {
+            Ok(_) => Ok(()),
+            Err(_e) => Err(AppError {
+                cause: Some(_e.to_string()),
+                message: None,
+                error_type: AppErrorType::DatabaseError,
+            }),
+        }
+
+    }
+
     pub async fn check_email(&self, db: &Database) -> Result<(), AppError> {
         let coll = get_coll(&db);
 
@@ -115,7 +206,7 @@ impl User {
                 None,
             )
             .await
-        {
+            {
             Ok(val) => {
                 if !val.is_none() {
                     return Err(AppError {
@@ -254,6 +345,36 @@ impl User {
             }),
         }
     }
+
+    pub async fn change_password_email(
+        db: &Database,
+        email: &str,
+        password: &str,
+    ) -> Result<(), AppError> {
+        let coll = get_coll(&db);
+        match coll
+            .update_one(
+                doc! {
+                    "email": email
+                },
+                doc! {
+                    "$set": {
+                        "password": CryptoService::hash_password(password.to_string()).await?,
+                    }
+                },
+                None,
+            )
+            .await
+        {
+            Ok(_) => Ok(()),
+            Err(_e) => Err(AppError {
+                cause: Some(_e.to_string()),
+                message: None,
+                error_type: AppErrorType::DatabaseError,
+            }),
+        }
+    }
+
 }
 
 impl UserCreds {
@@ -295,6 +416,42 @@ impl PatchUser {
             .await
         {
             Ok(_) => Ok(()),
+            Err(_e) => Err(AppError {
+                cause: Some(_e.to_string()),
+                message: None,
+                error_type: AppErrorType::DatabaseError,
+            }),
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Email{
+    pub email: String
+}
+
+impl Email {
+    pub async fn check_email(&self, db: &Database) -> Result<(), AppError> {
+        let coll = db.collection("users");
+        match coll
+            .find_one(
+                doc! {
+                    "email": self.email.as_str()
+                },
+                None,
+            )
+            .await
+        {
+            Ok(val) => {
+                if !val.is_none() {
+                    return Err(AppError {
+                        cause: Some("EMAIL_EXISTS".to_string()),
+                        message: None,
+                        error_type: AppErrorType::ALREADYEXIST,
+                    });
+                }
+                return Ok(());
+            }
             Err(_e) => Err(AppError {
                 cause: Some(_e.to_string()),
                 message: None,

@@ -12,6 +12,8 @@ pub enum AppErrorType {
     InavlidId,
     HashingError,
     ALREADYEXIST,
+    EmailError,
+    InavlidToken
 }
 
 #[derive(Debug)]
@@ -75,6 +77,8 @@ impl ResponseError for AppError {
             AppErrorType::InavlidId => StatusCode::NOT_FOUND,
             AppErrorType::HashingError => StatusCode::INTERNAL_SERVER_ERROR,
             AppErrorType::ALREADYEXIST => StatusCode::CREATED,
+            AppErrorType::EmailError => StatusCode::INTERNAL_SERVER_ERROR,
+            AppErrorType::InavlidToken => StatusCode::CREATED
         }
     }
 

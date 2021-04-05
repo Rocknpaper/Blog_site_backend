@@ -4,8 +4,9 @@ use mongodb::Database;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::sync::{Arc, Mutex};
+use rand::{Rng};
 
-use crate::{config::s3_aws, errors::AppError, errors::AppErrorType};
+use crate::{config::email_client::Emailer, config::s3_aws, errors::AppError, errors::AppErrorType, models::user::Email, models::user::UserCreds};
 use crate::{models::user::PatchUser, models::user::User, AppData};
 
 #[post("/user")]
@@ -75,6 +76,42 @@ pub async fn patch_user(
 
     data.patch_user_details(db.get_ref(), user_id.as_str())
         .await?;
+
+    Ok(HttpResponse::Ok().json(json! ({
+        "Status": "OK",
+        "response": 200
+    })))
+}
+
+
+
+#[post("/forget-password")]
+pub async fn forget_password(db: web::Data<Database>,data: web::Json<Email>) -> Result<HttpResponse, AppError>{
+    let mailer = Emailer::from_defaults();
+    let mut val = rand::thread_rng();
+    let rec = val.gen_range(1000, 9999);
+    User::add_recovery(db.get_ref(), data.email.as_str(), rec).await?;
+    mailer.new_service(data.email.clone(), rec).await?;
+    Ok(HttpResponse::Ok().json(json! ({
+        "Status": "OK",
+        "response": 200
+    })))
+}
+
+#[post("/password")]
+pub async fn  forget_success(db: web::Data<Database>, data: web::Json<UserCreds>) -> Result<HttpResponse, AppError>{
+    User::change_password_email(db.get_ref(), data.email.as_str(), data.password.as_str()).await?;
+    Ok(HttpResponse::Ok().json(json! ({
+        "Status": "OK",
+        "response": 200
+    })))
+}
+
+#[get("/forget-password/{email}/{code}")]
+pub async fn check_recovery(db: web::Data<Database>, data: web::Path<(String, i32)>) -> Result<HttpResponse, AppError>{
+    let (email, code) = data.into_inner();
+
+    User::check_validiity(db.get_ref(), email.as_str(), code).await?;
 
     Ok(HttpResponse::Ok().json(json! ({
         "Status": "OK",
